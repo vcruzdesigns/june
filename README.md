@@ -1,4 +1,4 @@
-# zerowriter - June Project Fork
+# zerowriter
 
 An easy, DIY eink typewriter running on a raspberry pi zero. Perfect for beginners.
 
@@ -59,9 +59,6 @@ Program Features:
 - CTRL S saves the cache to a txt file
 - CTRL N starts a new file
 - CTRL ESC turns unit off.
-- CTRL M shows a menu
-- CTRL R runs a full screen refresh
-- CTRL Q displays a QR code for the present document
 - (NEW, likely buggy) The arrow keys can be used to navigate through and review previous writing
 - You could easily add an output to google drive or etc
 
