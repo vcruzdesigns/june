@@ -5,7 +5,7 @@ from PIL import Image, ImageDraw, ImageFont
 import os
 import subprocess
 
-font24 = ImageFont.truetype('Geist-Regular.ttf', 18) #24
+font24 = ImageFont.truetype('Geist-Regular.otf', 18) #24
 
 class Menu:
     def __init__(self, display_draw, epd, display_image):
@@ -56,7 +56,7 @@ class ZeroWriter:
         self.previous_lines = []
         self.needs_display_update = True
         self.needs_input_update = True
-        self.chars_per_line = 32
+        self.chars_per_line = 50
         self.lines_on_screen = 12
         self.font_size = 18
         self.line_spacing = 22
