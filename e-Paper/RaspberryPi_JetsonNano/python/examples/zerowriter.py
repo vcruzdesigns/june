@@ -5,7 +5,7 @@ from PIL import Image, ImageDraw, ImageFont
 import os
 import subprocess
 
-font24 = ImageFont.truetype('Courier Prime.ttf', 18) #24
+font24 = ImageFont.truetype('Geist-Regular.ttf', 18) #24
 
 class Menu:
     def __init__(self, display_draw, epd, display_image):
@@ -166,7 +166,7 @@ class ZeroWriter:
     def power_down(self):
         #run powerdown script
         self.display_draw.rectangle((0, 0, 400, 300), fill=255)  # Clear display
-        self.display_draw.text((55, 150), "ZeroWriter Powered Down.", font=font24, fill=0)
+        self.display_draw.text((55, 150), "June Project - Working Model", font=font24, fill=0)
         partial_buffer = self.epd.getbuffer(self.display_image)
         self.epd.display(partial_buffer)
         time.sleep(3)
