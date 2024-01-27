@@ -7,6 +7,9 @@ import subprocess
 
 font24 = ImageFont.truetype('Geist-Regular.otf', 18) #24
 
+def is_keyboard_connected():
+    return os.path.exists('/dev/input/event0')
+
 class Menu:
     def __init__(self, display_draw, epd, display_image):
         self.display_draw = display_draw
@@ -41,7 +44,7 @@ class Menu:
             self.display_draw.text((10, y_position), prefix + item['text'], font=font24, fill=0)
             y_position += 30
         partial_buffer = self.epd.getbuffer(self.display_image)
-        self.epd.display(partial_buffer)
+        self.epd.display_Partial(partial_buffer)
 
 
 class ZeroWriter:
@@ -56,7 +59,7 @@ class ZeroWriter:
         self.previous_lines = []
         self.needs_display_update = True
         self.needs_input_update = True
-        self.chars_per_line = 50
+        self.chars_per_line = 47
         self.lines_on_screen = 12
         self.font_size = 18
         self.line_spacing = 22
@@ -68,11 +71,14 @@ class ZeroWriter:
         self.menu_mode = False
         self.menu = None
         self.parent_menu = None # used to store the menu that was open before the load menu was opened
+        self.typing_last_time = time.time()
         
         self.cache_file_path = os.path.join(os.path.dirname(__file__), 'data', 'cache.txt')
     
     def initialize(self):
-        self.epd.init()
+##        self.epd.init()
+##        self.epd.init_fast(self.epd.Seconds_1_5S)
+        self.epd.init_fast(self.epd.Seconds_1S)
         self.epd.Clear()
         self.display_image = Image.new('1', (self.epd.width, self.epd.height), 255)
         self.display_draw = ImageDraw.Draw(self.display_image)
@@ -87,7 +93,8 @@ class ZeroWriter:
         self.menu.addItem("Save", lambda: print("implement save"))
         self.menu.addItem("QR Code", self.display_qr_code)
         self.menu.addItem("Power Off", self.power_down)
-        self.menu.addItem("Update ZeroWriter", self.update_zerowriter)
+        self.menu.addItem("Update Software", self.update_zerowriter)
+        self.menu.addItem("File Menu Sample", self.file_sample)
         self.menu.addItem("Exit", self.hide_menu)
 
         self.load_menu = Menu(self.display_draw, self.epd, self.display_image)
@@ -145,7 +152,30 @@ class ZeroWriter:
             self.menu = self.parent_menu
             self.hide_menu()
 
-
+    def handle_keyboard_disconnection(self):
+        # Display disconnection message
+        self.display_draw.rectangle((0, 0, self.epd.width, self.epd.height), fill=255)  # Clear the display
+        self.display_draw.text((10, 10), "Keyboard disconnected. Please reconnect.", font=font24, fill=0)
+        self.epd.display(self.epd.getbuffer(self.display_image))
+##        self.keyboard.unhook_all()
+        # Wait for the keyboard to be reconnected
+        while not is_keyboard_connected():
+            try:
+                self.keyboard.hook(lambda e: None) # Attempt to re-hook the keyboard
+                print("checking for keyboard")
+                time.sleep(1)  # Wait a bit before checking connection status
+            except OSError:
+                pass  # Ignore the OSError as the keyboard is still disconnected
+        # Clear the disconnection message and resume normal operation
+        self.display_draw.rectangle((0, 0, self.epd.width, self.epd.height), fill=255)  # Clear the display
+        self.display_draw.text((10, 10), "Keyboard reconnected.", font=font24, fill=0)
+        self.epd.display(self.epd.getbuffer(self.display_image))
+        time.sleep(2)  # Give a brief pause to show the reconnection message
+        self.update_display()
+        #re-initialize keyboard?
+##        self.keyboard.on_press(self.handle_key_down, suppress=False) #handles modifiers and shortcuts
+##        self.keyboard.on_release(self.handle_key_press, suppress=True)
+        self.loop()
 
     def new_file(self):
         #save the cache first
@@ -165,16 +195,31 @@ class ZeroWriter:
 
     def power_down(self):
         #run powerdown script
-        self.display_draw.rectangle((0, 0, 400, 300), fill=255)  # Clear display
-        self.display_draw.text((55, 150), "June Project - Working Model", font=font24, fill=0)
+        self.epd.init()
+        self.epd.Clear()
+        self.epd.init_fast(self.epd.Seconds_1S)
+        self.display_draw.rectangle((0, 0, 400, 300), fill=255)  # Clear buffer
+        self.display_draw.text((78, 140), "June Project - Prototype V1", font=font24, fill=0)
         partial_buffer = self.epd.getbuffer(self.display_image)
-        self.epd.display(partial_buffer)
+        self.epd.display_Partial(partial_buffer)
         time.sleep(3)
         subprocess.run(['sudo', 'poweroff', '-f'])
         
-        self.needs_display_update = True
-        self.needs_input_update = True
+        self.needs_display_update = False
+        self.needs_input_update = False
 
+    def file_sample(self):
+##        self.display_draw.rectangle((0, 0, self.epd.width, self.epd.height), fill=255) # Clear the display
+        self.epd.init()
+        self.epd.Clear()
+        self.epd.init_fast(self.epd.Seconds_1S)
+        image_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'FSM_Round.png') # Load the image
+        fsm_image = Image.open(image_path)
+        fsm_image = fsm_image.resize((self.epd.width, self.epd.height), Image.ANTIALIAS) # Resize image if necessary
+        fsm_image = fsm_image.convert('1') # Convert the image to 1-bit color
+        self.epd.display_Partial(self.epd.getbuffer(fsm_image)) # Display the image
+        self.needs_display_update = False
+    
     def update_zerowriter(self):
         print("updating zerowriter")
         self.console_message = f"[Updating]"
@@ -280,6 +325,7 @@ class ZeroWriter:
         self.epd.display(partial_buffer)
 
     def update_display(self):
+        self.epd.init_fast(self.epd.Seconds_1S)
         self.display_updating = True
 
         # Clear the main display area -- also clears input line (270-300)
@@ -291,7 +337,41 @@ class ZeroWriter:
         #Make a temp array from previous_lines. And then reverse it and display as usual.
         current_line=max(0,len(self.previous_lines)-self.lines_on_screen*self.scrollindex)
         temp=self.previous_lines[current_line:current_line+self.lines_on_screen]
-        # print(temp)# to debug if you change the font parameters (size, chars per line, etc)
+        print(temp)# to debug if you change the font parameters (size, chars per line, etc)
+
+        for line in reversed(temp[-self.lines_on_screen:]):
+          self.display_draw.text((10, y_position), line[:self.chars_per_line], font=font24, fill=0)
+          y_position -= self.line_spacing
+
+        #Display Console Message
+        if self.console_message != "":
+            self.display_draw.rectangle((300, 270, 400, 300), fill=255)
+            self.display_draw.text((300, 270), self.console_message, font=font24, fill=0)
+            self.console_message = ""
+        
+        #generate display buffer for display
+        partial_buffer = self.epd.getbuffer(self.display_image)
+        self.epd.display_Partial(partial_buffer)
+
+        self.last_display_update = time.time()
+        self.display_updating = False
+        self.needs_display_update = False
+
+    def full_update_display(self):
+        self.epd.init()
+        print("updating full display")
+        self.display_updating = True
+
+        # Clear the main display area -- also clears input line (270-300)
+        self.display_draw.rectangle((0, 0, 400, 300), fill=255)
+        
+        # Display the previous lines
+        y_position = 270 - self.line_spacing  # leaves room for cursor input
+
+        #Make a temp array from previous_lines. And then reverse it and display as usual.
+        current_line=max(0,len(self.previous_lines)-self.lines_on_screen*self.scrollindex)
+        temp=self.previous_lines[current_line:current_line+self.lines_on_screen]
+        print(temp)# to debug if you change the font parameters (size, chars per line, etc)
 
         for line in reversed(temp[-self.lines_on_screen:]):
           self.display_draw.text((10, y_position), line[:self.chars_per_line], font=font24, fill=0)
@@ -324,7 +404,7 @@ class ZeroWriter:
         #generate display buffer for input line
         self.updating_input_area = True
         partial_buffer = self.epd.getbuffer(self.display_image)
-        self.epd.display(partial_buffer)
+        self.epd.display_Partial(partial_buffer)
         self.updating_input_area = False
 
     def insert_character(self, character):
@@ -345,12 +425,14 @@ class ZeroWriter:
             self.needs_input_update = True
 
     def handle_key_down(self, e):
+##        print(f"Key down: {e.name}") #print which keys are being pressed
         if e.name == 'shift': #if shift is released
             self.shift_active = True
         if e.name == 'ctrl': #if shift is released
             self.control_active = True
 
     def handle_key_press(self, e):
+##        print(f"Key press: {e.name}") #print which keys have been pressed
         if e.name== "s" and self.control_active:
             timestamp = time.strftime("%Y%m%d%H%M%S")  # Format: YYYYMMDDHHMMSS
 
@@ -405,9 +487,13 @@ class ZeroWriter:
         #powerdown - could add an autosleep if you want to save battery
         if e.name == "esc" and self.control_active: #ctrl+esc
             self.power_down()
+
+        if e.name == "esc": #exit the menu with Esc
+            if (self.menu_mode):
+                self.hide_menu()
         
         if e.name == "r" and self.control_active: #ctrl+r
-            self.update_display()
+            self.full_update_display()
         if e.name == "q" and self.control_active: #ctrl+r
             self.display_qr_code()
             
@@ -519,4 +605,6 @@ class ZeroWriter:
 
     def run(self):
         while True:
+            if not is_keyboard_connected():
+                self.handle_keyboard_disconnection()
             self.loop()
