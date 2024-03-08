@@ -1,4 +1,4 @@
-# zerowriter
+# Tapico Typer
 
 An easy, DIY eink typewriter running on a raspberry pi zero. Perfect for beginners.
 
