@@ -1,5 +1,7 @@
 # Tapico Typer
 
+More info at https://vcruzdesigns.com/tapico
+
 NOTE: The rest of this ReadMe is unedited from when I forked it from the Zerowriter project (check it out! https://github.com/zerowriter/zerowriter1).
 
 An easy, DIY eink typewriter running on a raspberry pi zero. Perfect for beginners.
