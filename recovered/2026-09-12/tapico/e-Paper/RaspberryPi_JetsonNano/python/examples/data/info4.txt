@@ -1,0 +1,9 @@
+Go ahead! Try typing!
+
+Ctrl N for a new file
+Ctrl I for info about the Tapico
+Ctrl R to refresh the screen
+Esc for the file menu (it's a mockup for now)
+
+
+

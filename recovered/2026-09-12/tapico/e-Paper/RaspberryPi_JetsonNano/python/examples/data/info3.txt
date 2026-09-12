@@ -1,0 +1,12 @@
+Hardware features:
+- a refreshingly tactile keyboard (standard
+   60% for those wondering)
+- an e-Ink display that respects your circadian
+   rhythm
+- an SD card slot for physical ownership over
+   one's data
+- designed for right-to-repair
+
+Software features:
+- file-select menu
+- a writing screen
